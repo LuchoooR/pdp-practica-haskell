@@ -1,2 +1,7 @@
-# pdp-practica-haskell
-Práctica de las guías de Haskell de PDP, sobre todo para entender mejor todos los temas de haskell y esta fino para el parcial.
+# ejercicio-alumno
+
+## Integrantes
+
+- integrante1 (usuario github)
+- integrante2 (usuario github)
+...
