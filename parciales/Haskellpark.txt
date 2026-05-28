@@ -83,5 +83,4 @@ tieneReparacionesPiolas atraccion (rep1 : resto)
 
 
 mannyALaObra :: Atraccion -> Atraccion
-mannyALaObra atraccion lista = foldl (\atrac f = f atrac) atraccion (reparaciones atraccion)
-
+mannyALaObra atraccion = foldl (\atrac f -> trabajo f atrac) atraccion (reparaciones atraccion)
