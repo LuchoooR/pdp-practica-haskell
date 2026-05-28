@@ -1,0 +1,81 @@
+data Jugador = Jugador{
+    nombre :: String,
+    velocidad :: Number,
+    habilidad :: Number,
+    puesto :: String,
+    registroPartidos :: [Partido]
+}
+
+data Partido = Partido{
+    minutosJugados :: Number,
+    golesMarcados :: Number
+}
+
+-- 1
+-- a
+
+type Equipo = [Jugador]
+
+saberNombesJugadores :: Number -> Equipo -> [String]
+saberNombesJugadores minutos lista = map nombre $ filter (all ((>=minutos) . minutosJugados) . registroPartidos) lista
+
+
+--b
+saberNombreJugador :: Equipo -> Bool
+saberNombreJugador lista = any ((== 'f') . head . nombre ) lista 
+
+
+type Dt = Jugador -> Jugador
+--2
+bielsa :: Dt
+bielsa jugador = (aumentarVelocidad . aumentarHabilidad (-10)) jugador
+
+aumentarVelocidad :: Jugador -> Jugador
+aumentarVelocidad jugador = jugador{
+    velocidad = velocidad jugador *1.50
+}
+
+aumentarHabilidad :: Number -> Jugador -> Jugador
+aumentarHabilidad numero jugador = jugador{
+    habilidad = habilidad jugador + numero
+}
+
+
+menotti :: Number -> Dt
+menotti numero jugador = (agregarPalabraNombre "Mr. " . aumentarHabilidad numero) jugador
+
+agregarPalabraNombre :: String -> Jugador -> Jugador
+agregarPalabraNombre palabra jugador = jugador{
+    nombre = nombre jugador ++ palabra
+}
+
+
+bertolotti :: Dt
+bertolotti jugador = (agregarPalabraNombre "Mr. " . aumentarHabilidad 10) jugador
+
+
+vanGaal :: Dt
+vanGaal jugador = jugador
+
+
+--3
+esBueno :: Jugador -> Bool
+esBueno jugador = habilidad jugador > velocidad jugador || puesto jugador == "Volante" 
+
+
+mejoraEquipo :: Dt -> Equipo -> Bool
+mejoraEquipo dt equipo = length(filter esBueno (map dt equipo)) > length(filter esBueno equipo)
+
+
+--4
+Queremos saber si un jugador es imparable. Esto se da si con el correr de los partidos va metiendo la misma cantidad de goles o más.
+esImparable :: Jugador -> Bool
+esImparable jugador = esImparableRec (registroPartidos jugador)
+
+esImparableRec :: [Partido] -> Bool
+    esImparableRec [] = True 
+    esImparableRec [_] = True
+    esImparableRec (p1:p2:ps) = golesMarcados p1 <= golesMarcados p2 && esImparableRec (p2:ps)
+
+ 
+

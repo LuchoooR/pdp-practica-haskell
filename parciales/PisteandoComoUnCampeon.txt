@@ -1,0 +1,190 @@
+data Auto =  Auto {
+    marca :: String,
+    modelo :: String,
+    desgaste :: (Number, Number), -- (chasis, ruedas)
+    velocidadMaxima :: Number,
+    tiempoDeCarrera :: Number,
+    uso :: Number
+} 
+
+-- 1 
+ferrari = Auto {
+    marca = "Ferrari",
+    modelo = "F50",
+    desgaste = (0,0),
+    velocidadMaxima = 65,
+    tiempoDeCarrera = 0,
+    uso = 0
+}
+
+lamborghini = Auto {
+    marca = "Lamborghini",
+    modelo = "Diablo",
+    desgaste = (7,4), -- 7 chasis, 4 ruedas
+    velocidadMaxima = 73,
+    tiempoDeCarrera = 0,
+    uso = 0
+}
+
+fiat = Auto {
+    marca = "Fiat",
+    modelo = "600",
+    desgaste = (33,27), -- 33 chasis, 27 ruedas
+    velocidadMaxima = 44,
+    tiempoDeCarrera = 0,
+    uso = 0
+}
+
+
+-- 2
+-- a
+esBuenEstado :: Auto -> Bool
+-- fst es chasis (< 40), snd es ruedas (< 60)
+esBuenEstado auto = ((< 40) . fst . desgaste) auto  && ((< 60) . snd . desgaste) auto 
+
+
+-- b 
+noDaMas :: Auto -> Bool
+-- fst es chasis (> 80), snd es ruedas (> 80)
+noDaMas auto = ((> 80) . fst . desgaste) auto || ((> 80) . snd . desgaste) auto 
+
+
+-- 3
+repararAuto :: Auto -> Auto
+repararAuto auto = bajarDesgasteChasis auto
+
+bajarDesgasteChasis :: Auto -> Auto
+bajarDesgasteChasis auto = auto{
+    -- fst es chasis (se baja un 85%, o sea queda en 0.15), snd es ruedas (queda en 0)
+    desgaste = (fst (desgaste auto) * 0.15 , 0)
+} 
+
+
+--4
+-- a
+type Tramo = Auto -> Auto
+type Pista = [Tramo]
+
+curva :: Number -> Number -> Tramo
+curva angulo longitud auto = auto {
+    -- En la curva el chasis (fst) queda igual, se afectan las ruedas (snd)
+    desgaste = (fst (desgaste auto), snd (desgaste auto) + (3 * longitud / angulo)),
+    tiempoDeCarrera = sumarTiempoLongitud longitud auto 2
+}
+
+sumarTiempoLongitud :: Number -> Auto -> Number -> Number
+sumarTiempoLongitud longitud auto numero = tiempoDeCarrera auto + longitud / (velocidadMaxima auto / numero )
+
+-- ii
+curvaPeligrosa :: Tramo
+curvaPeligrosa = curva 60 300
+
+
+-- iii
+curvaTranca :: Tramo
+curvaTranca = curva 110 550
+
+
+-- b
+recto :: Number -> Tramo
+recto longitud auto = auto {
+    -- En la recta se afecta el chasis (fst), las ruedas (snd) quedan igual
+    desgaste = (fst (desgaste auto) + longitud * 0.01, snd (desgaste auto)),
+    tiempoDeCarrera = sumarTiempoLongitud longitud auto 1
+}
+
+-- ii
+tramoRectoClassic :: Tramo
+tramoRectoClassic = recto 750
+
+-- iii
+tramito :: Tramo
+tramito = recto 280
+
+
+-- c 
+boxes :: Tramo -> Tramo 
+boxes tramoInterno auto 
+ | esBuenEstado auto = tramoInterno auto
+ | otherwise = repararAuto (sumarTiempo 10 (tramoInterno auto))
+
+sumarTiempo :: Number -> Auto -> Auto
+sumarTiempo tiempo auto = auto {
+    tiempoDeCarrera = tiempoDeCarrera auto + tiempo
+}
+
+
+-- d
+
+mojado :: Tramo -> Tramo
+mojado tramoInterno auto = aplicarEfectoMojado auto (tramoInterno auto)
+
+aplicarEfectoMojado :: Auto -> Auto -> Auto
+aplicarEfectoMojado autoOriginal autoPasado = 
+    sumarTiempo ((tiempoDeCarrera autoPasado - tiempoDeCarrera autoOriginal) / 2) autoPasado
+
+
+ripio :: Tramo -> Tramo
+ripio tramo = tramo . tramo
+
+obstaculos :: Number -> Tramo -> Tramo
+obstaculos metros tramoInterno = empeorarRuedas metros . tramoInterno
+
+empeorarRuedas :: Number -> Auto -> Auto
+empeorarRuedas metros auto = auto {
+    desgaste = (fst (desgaste auto), snd (desgaste auto) + (2 * metros))
+}
+
+--5
+pasarPorTramo :: Tramo -> Auto -> Auto
+pasarPorTramo tramo auto 
+ | noDaMas auto = auto
+ | otherwise = tramo auto
+
+
+--6
+--a
+superPista :: Pista
+superPista = [
+    tramoRectoClassic, 
+    curvaTranca, 
+    mojado tramito, 
+    tramito, 
+    obstaculos 2 (curva 80 400), -- Obstrucción de 2m
+    curva 115 650, 
+    recto 970, 
+    curvaPeligrosa, 
+    ripio tramito, 
+    boxes (recto 800) -- Paréntesis necesarios
+]
+
+--b
+peganLaVuelta :: Pista -> [Auto] -> [Auto]
+peganLaVuelta pista autos = map (darVuelta pista) autos
+
+darVuelta :: Pista -> Auto -> Auto
+darVuelta pista autoInicial = foldl (flip pasarPorTramo) autoInicial pista
+
+
+--7
+data Carrera = Carrera{
+    pista :: Pista,
+    vueltas :: Number
+}
+
+tourBuenosAires = Carrera{
+    pista = superPista,
+    vueltas = 20
+}
+
+jugarCarrera :: Carrera -> [Auto] 
+jugarCarrera carrera autos = 
+    take (vueltas carrera +1) $ iterate (darVueltaYFiltrar (pista carrera)) autos
+
+
+darVueltaYFiltrar :: Pista -> [Auto] -> [Auto]
+darVueltaYFiltrar pistaCarrera autos = filter (not . noDaMas) . peganLaVuelta pistaCarrera autos
+
+--8
+myPrecious :: [([a], c -> Number)] -> (b, c) -> Number
+myPrecious ts x = sum . map ( (($ snd x). snd ) . filter ((>5) . length . fst x)) $ ts
