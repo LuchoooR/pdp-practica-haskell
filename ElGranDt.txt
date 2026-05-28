@@ -1,0 +1,31 @@
+Data Jugador = Jugador{
+    nombre :: String,
+    velocidad :: Number,
+    habilidad :: Number,
+    puesto :: String,
+    registroPartidos :: [Partido]
+}
+
+data Partido = Partido{
+    minutosJugados :: Number,
+    golesMarcados :: Number,
+}
+
+-- 1
+-- a
+
+Type Equipo = [Jugadores]
+
+saberNombesJugadores :: Number -> Equipo -> [String]
+saberNombesJugadores minutos lista = map nombre . filter (all ((>=minutos) . minutosJugados) . partido) lista
+
+
+--b
+saberNombreJugador :: Equipo -> Bool
+saberNombesJugador lista = any ((== f) . head . nombre ) lista 
+
+--2
+bielsa :: Equipo -> Equipo
+bielsa equipo = map 
+
+bajarVelocidadHabilidad 

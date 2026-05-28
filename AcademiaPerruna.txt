@@ -1,0 +1,30 @@
+--1 
+data Perro = Perro {
+  nombre:: String,
+  estamina:: Number,
+  juguete:: Juguete,
+  criterioJuego :: Perro -> Bool
+} 
+
+data Juguete = Juguete {
+    color :: String,
+    rechina :: Bool
+}
+
+sultan = Perro {
+  nombre = "Sultán",
+  estamina = 25,
+  juguete  = Juguete {color ="azul", rechina=False},
+  criterioJuego = rechina . juguete
+}
+
+
+-- b
+recibirJuguete :: Juguete -> Perro -> Perro
+recibirJuguete juguete perro = (cambiarEstamina (*1.03)) $ (jugueteNuevo perro) juguete
+
+jugueteNuevo perro nuevo = perro {juguete = nuevo} 
+cambiarEstamina x perro = perro {estamina = x (estamina perro)}
+
+-- c
+puedenJungarJuntos :: Perro -> Perro -> Bool

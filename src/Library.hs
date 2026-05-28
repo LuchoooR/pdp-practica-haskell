@@ -324,3 +324,39 @@ aprobó lista
 aprobaron :: [[Number]] -> [[Number]]
 aprobaron listas = filter aprobó listas
 
+
+--7 
+-- Definir la función divisores/1, 
+-- que recibe un número y devuelve la lista de divisores. P.ej. 
+-- Main> divisores 60 
+-- [1,2,3,4,5,6,10,12,15,20,30,60] 
+-- Ayuda: para calcular divisores n alcanza con revisar los números entre 1 y n. 
+
+divisores :: Number -> [Number]
+divisores numero = [x | x <- [1 .. numero], mod numero x == 0]
+
+--8
+-- Definir la función exists/2, 
+-- que dadas una función booleana y 
+-- una lista devuelve True si la función da True para algún elemento de la lista. P.ej. 
+-- Main> exists even [1,3,5] 
+-- False 
+-- Main> exists even [1,4,7] 
+-- True 
+-- porque even 4 da True 
+exists :: (a -> Bool) -> [a] -> Bool
+exists f lista = any f lista
+
+
+--9 
+-- Definir la función hayAlgunNegativo/2, 
+-- que dada una lista de números y un (…algo…) 
+-- devuelve True si hay algún nro. negativo. 
+-- Main> hayAlgunNegativo [2,-3,9] (…algo…) 
+-- True 
+hayAlgunNegativo :: [Number] -> a -> Bool
+hayAlgunNegativo lista f = any (<0) lista
+
+
+
+

@@ -1,0 +1,124 @@
+data Auto =  Auto {
+    marca :: String,
+    modelo :: String,
+    desgaste :: (Number, Number),
+    velocidadMaxima :: Number,
+    tiempoDeCarrera :: Number,
+    uso :: Number
+} 
+
+-- 1 
+ferrari = Auto {
+    marca = "Ferrari",
+    modelo = "F50",
+    desgaste = (0,0),
+    velocidadMaxima = 65,
+    tiempoDeCarrera = 0,
+    uso = 0
+}
+
+lamborghini = Auto {
+    marca = "Lamborghini",
+    modelo = "Diablo",
+    desgaste = (4,7),
+    velocidadMaxima = 73,
+    tiempoDeCarrera = 0,
+    uso = 0
+}
+
+fiat = Auto {
+    marca = "Fiat",
+    modelo = "600",
+    desgaste = (27,33),
+    velocidadMaxima = 44,
+    tiempoDeCarrera = 0,
+    uso = 0
+}
+
+
+-- 2
+-- desgaste (chasis, auto)
+-- a
+esBuenEstado :: Auto -> Bool
+esBuenEstado auto = ((< 40) . fst . desgaste) auto  && ((< 60) . snd . desgaste) auto 
+
+
+-- b 
+noDaMas :: Auto -> Bool
+noDaMas auto = ((> 80) . fst . desgaste) auto || ((> 80) . snd . desgaste) auto 
+
+
+-- 3
+repararAuto :: Auto -> Auto
+repararAuto auto = bajarDesgasteChasis auto
+
+bajarDesgasteChasis :: Auto -> Auto
+bajarDesgasteChasis auto = auto{
+    desgaste = ( (fst desgaste auto) *0.15 , 0)
+} 
+
+
+--4
+-- a
+data Pista = Pista {
+    curva :: [],
+    rectas :: [],
+    boxes :: []
+}
+
+Type Tramo = Auto -> Auto
+
+curva :: Number -> Number -> Tramo
+curva angulo longitud auto = auto {
+    desgaste = (fst (desgaste auto), (snd desgaste auto) * (3* longitud/angulo) ),
+    tiempoDeCarrera = sumarTiempoLongitud longitud auto 2
+}
+
+sumarTiempoLongitud :: Number -> Auto -> Number -> Number
+sumarTiempoLongitud longitud auto numero = tiempoDeCarrera auto + longitud / (velocidadMaxima auto / numero )
+
+-- ii
+curvaPeligrosa :: Tramo
+curvaPeligrosa = curva 60 300
+
+
+-- iii
+curvaTranca :: Tramo
+curvaTranca = curva 110 550
+
+
+-- b
+recto :: Number -> Tramo
+recto longitud auto = auto {
+    desgaste = desgaste = (fst (desgaste auto) + longitud * 0.01, snd (desgaste auto)),
+    tiempoDeCarrera = sumarTiempoLongitud longitud auto 1
+}
+
+-- ii
+tramoRectoClassic :: Tramo
+tramoRectoClassic = recto 750
+
+-- iii
+tramito :: Tramo
+tramito = recto 280
+
+
+-- c 
+boxes :: Number -> Tramo 
+boxes tiempo auto 
+ | esBuenEstado auto = sumarTiempo tiempo auto,
+ | otherwise = (repararAuto . sumarTiempo (tiempo+10)) auto
+
+
+sumarTiempo :: Number -> Auto -> Auto
+sumarTiempo tiempo auto = auto {
+    tiempoDeCarrera = tiempoDeCarrera auto + tiempo
+}
+
+
+-- d
+mojado :: Tramo -> Tramo
+mojado tramo auto = auto{
+    
+}
+
