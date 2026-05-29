@@ -1,0 +1,154 @@
+data Envio = Envio{
+    lugarDeOrigen :: Lugar,
+    lugarDeDestino :: Lugar,
+    peso :: Number,
+    precioBase :: Number,
+    categorias :: [String],
+    impuestos :: [Impuesto]
+} 
+
+data Lugar = Lugar{
+    ciudad :: String,
+    pais :: String
+} 
+
+type Cargo = Envio -> Number
+type Impuesto = Number -> Envio -> Number
+
+cargoArbitario :: Cargo
+cargoArbitario _ = 50
+
+cargoCategorico :: String -> Number -> Cargo
+cargoCategorico categoria porcentaje envio 
+ | elem categoria (categorias envio) = precioBase envio * porcentaje
+ | otherwise = 0
+
+cargoPorSobrepeso :: Number -> Cargo
+cargoPorSobrepeso kg envio 
+ | peso envio <= kg = 0
+ | otherwise = sumarPesoPorKg kg envio
+
+sumarPesoPorKg :: Number -> Envio -> Number
+sumarPesoPorKg kg envio = ((*80) (peso envio - kg))
+
+-------
+iVA :: Impuesto
+iVA precioBruto _ = precioBruto * 0.20
+
+multicagoria :: Impuesto
+multicagoria precioBruto envio 
+ | length(categorias envio) > 3 = precioBruto * 0.01
+ | otherwise = 0
+
+aduanero :: Impuesto 
+aduanero precioBruto envio 
+ | esInternacional envio = precioBruto *0.03
+ | otherwise = 0
+
+impuestoExtraño :: Impuesto
+impuestoExtraño precioBruto _ 
+ | mod precioBruto 2 == 0 = precioBruto * 0.10
+ | otherwise = 0
+
+esInternacional :: Envio -> Bool
+esInternacional envio 
+ | pais (lugarDeDestino envio) /= pais (lugarDeOrigen envio) = True
+ | otherwise = False
+
+calcularPrecioBruto :: [Cargo] -> Envio -> Number
+calcularPrecioBruto cargos envio = precioBase envio + sum (map ($ envio) cargos)
+
+aplicarUnImpuesto :: Number -> Envio -> Impuesto -> Number
+aplicarUnImpuesto precioBruto envio impuesto = impuesto precioBruto envio
+
+aplicarImpuestos :: Number -> Envio -> Number
+aplicarImpuestos precioBruto envio = (+ precioBruto) . sum $ map (aplicarUnImpuesto precioBruto envio) (impuestos envio)
+
+calcularPrecioTotal :: Envio -> [Cargo] -> Number
+calcularPrecioTotal envio cargos = aplicarImpuestos (calcularPrecioBruto cargos envio) envio 
+
+--2
+--a
+cargoTecnologia ::  Cargo
+cargoTecnologia = cargoCategorico "tecnología" 0.18
+
+--b
+envioBuenosAires :: Envio
+envioBuenosAires = Envio{
+    lugarDeOrigen = Lugar{
+        ciudad = "Buenos Aires",
+        pais = "Argentina"
+    },
+    lugarDeDestino = Lugar{
+        ciudad = "Utrecht",
+        pais = "Paises Bajos"
+    },
+    peso = 2,
+    precioBase = 220,
+    categorias = ["teconología", "musica"],
+    impuestos = []
+}
+
+--c
+envioCalifornia :: Envio
+envioCalifornia = Envio{
+    lugarDeOrigen = Lugar{
+        ciudad = "California",
+        pais = "Estados Unidos"
+    },
+    lugarDeDestino = Lugar{
+        ciudad = "Miami",
+        pais = "Estado Unidos"
+    },
+    peso = 5,
+    precioBase = 1500,
+    categorias = [ "Libros"],
+    impuestos = [iVA, impuestoExtraño]
+}
+
+
+--3
+--a
+cuestaMas :: Number -> Envio -> Bool
+cuestaMas numero envio 
+ | precioBase envio > numero = True
+ | otherwise = False
+
+
+esBarato :: Envio -> Bool
+esBarato envio 
+ | precioBase envio <= 1300 = True 
+ | otherwise = False
+
+
+--4
+--a
+seDirigeA :: String -> Envio -> Bool
+seDirigeA paisprobable envio 
+ | pais (lugarDeDestino envio) == paisprobable = True
+ | otherwise = False
+
+
+--b
+esLocal :: Envio -> Bool
+esLocal envio = not $ esInternacional envio
+
+--5
+obtenerPedidosConCategoria :: [Envio] -> [Envio]
+obtenerPedidosConCategoria [] = []
+obtenerPedidosConCategoria (x:xs)
+ | length (categorias x) > 0 = (x: obtenerPedidosConCategoria xs)
+ | otherwise = (obtenerPedidosConCategoria xs)
+
+--6
+-- esta hecho más arriba
+
+
+--7
+elCargoMasDoloroso :: Envio -> [Cargo] -> Cargo
+elCargoMasDoloroso envio cargos = map ($ envio) cargos
+
+
+--8
+whatever :: () -> (a -> b) ->  -- ni idea
+whatever x y z = z x . filter ((x==) . y) 

@@ -356,4 +356,3 @@ exists f lista = any f lista
 -- True 
 hayAlgunNegativo :: [Number] -> a -> Bool
 hayAlgunNegativo lista f = any (<0) lista
-

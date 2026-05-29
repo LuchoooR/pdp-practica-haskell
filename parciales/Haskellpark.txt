@@ -15,7 +15,7 @@ data Reparacion = Reparacion {
 -- 1
 queTanBuenaAtraccion :: Atraccion -> Number
 queTanBuenaAtraccion atraccion 
- |  duracion atraccion > 10 = 100
+ | duracion atraccion > 10 = 100
  | length(reparaciones atraccion) < 3 = 10*length(nombre atraccion) + 2*length(opinionesGente atraccion)
  | otherwise = 10*(alturaMinima atraccion)
 
