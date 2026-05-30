@@ -1,73 +1,114 @@
-data Atraccion = Atraccion{
+-- ====================================================================
+{- CONSIGNA:
+Modelamos una aplicación de parques de diversiones donde registramos sus atracciones...
+-}
+-- ====================================================================
+
+data Atraccion = Atraccion {
     nombre :: String,
-    alturaMinima :: Number,
-    duracion :: Number,
+    alturaMinima :: Float, -- Usamos Float para las multiplicaciones con decimales
+    duracion :: Float,
     opinionesGente :: [String],
     mantenimiento :: Bool,
     reparaciones :: [Reparacion]
-}
+} deriving (Show)
 
 data Reparacion = Reparacion {
-    dias :: Number,
+    dias :: Float,
     trabajo :: Atraccion -> Atraccion
-}
+} deriving (Show)
 
--- 1
-queTanBuenaAtraccion :: Atraccion -> Number
+
+-- ====================================================================
+{- CONSIGNA PUNTO 1: Más bueno que … (2 puntos)
+Si la atracción tiene una duración prolongada (> 10 min) valen 100 puntos. 
+Si tiene menos de 3 órdenes de reparaciones: 10 * letras del nombre + 2 * opiniones. 
+Caso contrario: 10 * altura mínima requerida.
+-}
+-- ====================================================================
+
+queTanBuenaAtraccion :: Atraccion -> Float
 queTanBuenaAtraccion atraccion 
  | duracion atraccion > 10 = 100
- | length(reparaciones atraccion) < 3 = 10*length(nombre atraccion) + 2*length(opinionesGente atraccion)
- | otherwise = 10*(alturaMinima atraccion)
+ -- Usamos fromIntegral para convertir los Int de 'length' a Float
+ | length (reparaciones atraccion) < 3 = fromIntegral (10 * length (nombre atraccion) + 2 * length (opinionesGente atraccion))
+ | otherwise = 10 * alturaMinima atraccion
 
---2
 
-ajusteDeTornilleria :: Number -> Atraccion -> Atraccion
+-- ====================================================================
+{- CONSIGNA PUNTO 2: Iguana fissss (4 puntos)
+luego de que realizan cualquier trabajo siempre ocurren dos cosas: se elimina la última 
+reparación y se verifica que no tenga reparaciones pendientes para el estado mantenimiento.
+ajusteDeTornillería: +1 min por tornillo (max 10).
+engrase: +0,1 cm altura por gramo y agrega opinión “para valientes”.
+mantenimientoElectrico: se queda con las dos primeras opiniones.
+mantenimientoBásico: ajuste de 8 tornillos y engrase de 10 gramos.
+-}
+-- ====================================================================
+
+ajusteDeTornilleria :: Float -> Atraccion -> Atraccion
 ajusteDeTornilleria tornillos = terminarTrabajo . aplicarAjuste tornillos
+-- NOTA POINT-FREE: acá antes era "ajusteDeTornilleria tornillos atraccion = (terminarTrabajo . aplicarAjuste tornillos) atraccion"
 
-aplicarAjuste :: Number -> Atraccion -> Atraccion
+aplicarAjuste :: Float -> Atraccion -> Atraccion
 aplicarAjuste tornillos atraccion = atraccion {
     duracion = min (tornillos + duracion atraccion) 10
 }
 
 terminarTrabajo :: Atraccion -> Atraccion
-terminarTrabajo atraccion = atraccion {
-    reparaciones = init (reparaciones atraccion),
-    mantenimiento = length (init (reparaciones atraccion)) > 0
-}
+terminarTrabajo atraccion 
+    | null (reparaciones atraccion) = atraccion -- Guarda de seguridad por si no hay reparaciones
+    | otherwise = atraccion {
+        reparaciones = init (reparaciones atraccion),
+        mantenimiento = not (null (init (reparaciones atraccion)))
+    }
 
-engrase :: Number -> Atraccion -> Atraccion
+engrase :: Float -> Atraccion -> Atraccion
 engrase grasa = terminarTrabajo . aplicarEngrase grasa
 
-aplicarEngrase :: Number -> Atraccion -> Atraccion
+aplicarEngrase :: Float -> Atraccion -> Atraccion
 aplicarEngrase grasa = agregarOpinion "para valientes" . modificarAltura grasa
+-- NOTA POINT-FREE: acá antes era "aplicarEngrase grasa atraccion = (agregarOpinion ... . modificarAltura ...) atraccion"
 
-modificarAltura grasa atraccion = atraccion{
+modificarAltura :: Float -> Atraccion -> Atraccion
+modificarAltura grasa atraccion = atraccion {
     alturaMinima = alturaMinima atraccion + (0.1 * grasa)
 }
 
 agregarOpinion :: String -> Atraccion -> Atraccion
-agregarOpinion palabra atraccion = atraccion{
+agregarOpinion palabra atraccion = atraccion {
     opinionesGente = opinionesGente atraccion ++ [palabra]
 }
 
-
 mantenimientoElectrico :: Atraccion -> Atraccion
-mantenimientoElectrico atraccion = terminarTrabajo $ sacarOpiniones 2 atraccion
+mantenimientoElectrico = terminarTrabajo . sacarOpiniones 2 
+-- NOTA POINT-FREE: acá antes era "mantenimientoElectrico atraccion = terminarTrabajo (sacarOpiniones 2 atraccion)"
 
-sacarOpiniones :: Number -> Atraccion -> Atraccion 
-sacarOpiniones numero atraccion = atraccion{
-    opinionesGente = take numero $ opinionesGente atraccion
+sacarOpiniones :: Int -> Atraccion -> Atraccion 
+sacarOpiniones numero atraccion = atraccion {
+    opinionesGente = take numero (opinionesGente atraccion)
 }
 
 mantenimientoBasico :: Atraccion -> Atraccion
-mantenimientoBasico = (ajusteDeTornilleria 8 . engrase 10) 
+mantenimientoBasico = ajusteDeTornilleria 8 . engrase 10 
+-- (Perfectamente compuesto)
 
---3
+
+-- ====================================================================
+{- CONSIGNA PUNTO 3: ¿Qué oooooonda este parque? (3 puntos)
+meDaMiedito: alguna inspección asignó más de 4 días de mantenimiento.
+acaCerramos: sumatoria de tiempo de reparaciones pendientes es 7 días.
+disneyNoEsistis: todas las atracciones de nombre cheto (> 5 letras) no tienen rep. pendientes. (Sin recursividad).
+-}
+-- ====================================================================
+
 meDaMiedito :: Atraccion -> Bool
-meDaMiedito atraccion = any ((>4) . dias) (reparaciones atraccion)
+meDaMiedito = any ((> 4) . dias) . reparaciones
+-- NOTA POINT-FREE: acá antes era "meDaMiedito atraccion = any ((>4) . dias) (reparaciones atraccion)"
 
 acaCerramos :: Atraccion -> Bool
-acaCerramos atraccion = sum (map dias (reparaciones atraccion)) == 7
+acaCerramos = (== 7) . sum . map dias . reparaciones
+-- NOTA POINT-FREE: acá antes era "acaCerramos atraccion = sum (map dias (reparaciones atraccion)) == 7"
 
 type Parque = [Atraccion]
 
@@ -75,12 +116,66 @@ disneyNoEsistis :: Parque -> Bool
 disneyNoEsistis = all (null . reparaciones) . filter ((> 5) . length . nombre)
 
 
-tieneReparacionesPiolas :: Atraccion -> [Atraccion -> Atraccion] -> Bool
-tieneReparacionesPiolas atraccion [] = True
-tieneReparacionesPiolas atraccion (rep1 : resto) 
- | (queTanBuenaAtraccion (rep1 atraccion)) > queTanBuenaAtraccion atraccion = tieneReparacionesPiolas (rep1 atraccion) resto
- | otherwise = False
+-- ====================================================================
+{- CONSIGNA PUNTO 4: Reparaciones peolas (2 puntos)
+Una atracción tiene reparaciones peolas si luego de cada una el puntaje mejora 
+con respecto a la reparación previa. (Exclusivamente con recursividad).
+-}
+-- ====================================================================
 
+tieneReparacionesPiolas :: Atraccion -> Bool
+tieneReparacionesPiolas atraccion = evaluarReparaciones atraccion (reparaciones atraccion)
+
+-- Función auxiliar para poder iterar sobre las reparaciones recursivamente
+evaluarReparaciones :: Atraccion -> [Reparacion] -> Bool
+evaluarReparaciones _ [] = True
+evaluarReparaciones atraccion (rep : resto) 
+ | queTanBuenaAtraccion atracReparada > queTanBuenaAtraccion atraccion = evaluarReparaciones atracReparada resto
+ | otherwise = False
+ where atracReparada = trabajo rep atraccion
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 5: Manny a la obra (2 puntos)
+Realizar los trabajos de las reparaciones pendientes sobre una atracción. (SIN recursividad).
+-}
+-- ====================================================================
 
 mannyALaObra :: Atraccion -> Atraccion
-mannyALaObra atraccion = foldl (\atrac f -> trabajo f atrac) atraccion (reparaciones atraccion)
+mannyALaObra atraccion = foldl (flip trabajo) atraccion (reparaciones atraccion)
+-- NOTA: Acá simplificamos tu lambda (\atrac f -> trabajo f atrac). 
+-- Dar vuelta los parámetros es exactamente lo que hace la función 'flip'.
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 6: Estoy cansado jefe… (1 puntos)
+Si una atracción tiene una cantidad infinita de trabajos, ¿sería posible obtener un valor 
+computable para la función del punto anterior? ¿Qué ocurriría con una lista de trabajos 
+infinita en el punto 4? Justifique sus respuestas relacionándolo con un concepto visto en la materia.
+-}
+-- ====================================================================
+{- RESPUESTA TEÓRICA:
+
+1. ¿Sería posible obtener un valor computable para 'mannyALaObra' si hay infinitos trabajos?
+No, no sería posible. La función 'mannyALaObra' utiliza 'foldl' (o cualquier herramienta 
+de orden superior que reduzca una lista a un único valor) para aplicar todas las reparaciones 
+y devolver la Atraccion resultante. Para poder devolver ese resultado final, la función está 
+obligada a recorrer y procesar la lista en su totalidad. Al ser una lista infinita, la 
+función nunca terminaría de evaluar (diverge) y el programa se colgaría.
+
+2. ¿Qué ocurriría con una lista de trabajos infinita en 'tieneReparacionesPiolas' (Punto 4)?
+En este caso, depende. Podríamos obtener un resultado computable (un False) si en algún 
+momento de la lista encontramos una reparación que *no* mejore el puntaje. Al encontrar 
+la primera condición que no se cumple, la recursividad corta y devuelve False al instante. 
+Sin embargo, si absolutamente todas las reparaciones de esa lista infinita fueran "piolas", 
+la función nunca encontraría una condición de corte y se quedaría evaluando infinitamente.
+
+3. Justificación teórica:
+Todo esto ocurre gracias al concepto de **Evaluación Diferida (Lazy Evaluation)** que 
+tiene Haskell. Este mecanismo hace que el motor de Haskell evalúe las expresiones únicamente 
+cuando es estrictamente necesario para dar una respuesta. En el Punto 4, gracias al 
+Lazy Evaluation, al toparse con el primer False, Haskell entiende que ya no necesita 
+seguir evaluando el resto de la lista infinita para dar el resultado final. En cambio, 
+en el Punto 5, se requiere el resultado de procesar *todos* los elementos de la lista 
+para armar el dato final, por lo que la evaluación diferida no evita que el programa diverja.
+-}

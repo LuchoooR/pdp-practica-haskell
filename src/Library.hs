@@ -356,3 +356,93 @@ exists f lista = any f lista
 -- True 
 hayAlgunNegativo :: [Number] -> a -> Bool
 hayAlgunNegativo lista f = any (<0) lista
+
+
+
+data Atraccion = Atraccion{
+    nombre :: String,
+    alturaMinima :: Number,
+    duracion :: Number,
+    opinionesGente :: [String],
+    mantenimiento :: Bool,
+    reparaciones :: [Reparacion]
+}
+
+data Reparacion = Reparacion {
+    dias :: Number,
+    trabajo :: Atraccion -> Atraccion
+}
+
+-- 1
+queTanBuenaAtraccion :: Atraccion -> Number
+queTanBuenaAtraccion atraccion 
+ | duracion atraccion > 10 = 100
+ | length(reparaciones atraccion) < 3 = 10*length(nombre atraccion) + 2*length(opinionesGente atraccion)
+ | otherwise = 10*(alturaMinima atraccion)
+
+--2
+
+ajusteDeTornilleria :: Number -> Atraccion -> Atraccion
+ajusteDeTornilleria tornillos = terminarTrabajo . aplicarAjuste tornillos
+
+aplicarAjuste :: Number -> Atraccion -> Atraccion
+aplicarAjuste tornillos atraccion = atraccion {
+    duracion = min (tornillos + duracion atraccion) 10
+}
+
+terminarTrabajo :: Atraccion -> Atraccion
+terminarTrabajo atraccion = atraccion {
+    reparaciones = init (reparaciones atraccion),
+    mantenimiento = length (init (reparaciones atraccion)) > 0
+}
+
+engrase :: Number -> Atraccion -> Atraccion
+engrase grasa = terminarTrabajo . aplicarEngrase grasa
+
+aplicarEngrase :: Number -> Atraccion -> Atraccion
+aplicarEngrase grasa = agregarOpinion "para valientes" . modificarAltura grasa
+
+modificarAltura grasa atraccion = atraccion{
+    alturaMinima = alturaMinima atraccion + (0.1 * grasa)
+}
+
+agregarOpinion :: String -> Atraccion -> Atraccion
+agregarOpinion palabra atraccion = atraccion{
+    opinionesGente = opinionesGente atraccion ++ [palabra]
+}
+
+
+mantenimientoElectrico :: Atraccion -> Atraccion
+mantenimientoElectrico atraccion = terminarTrabajo $ sacarOpiniones 2 atraccion
+
+sacarOpiniones :: Number -> Atraccion -> Atraccion 
+sacarOpiniones numero atraccion = atraccion{
+    opinionesGente = take numero $ opinionesGente atraccion
+}
+
+mantenimientoBasico :: Atraccion -> Atraccion
+mantenimientoBasico = (ajusteDeTornilleria 8 . engrase 10) 
+
+--3
+meDaMiedito :: Atraccion -> Bool
+meDaMiedito atraccion = any ((>4) . dias) (reparaciones atraccion)
+
+acaCerramos :: Atraccion -> Bool
+acaCerramos atraccion = sum (map dias (reparaciones atraccion)) == 7
+
+type Parque = [Atraccion]
+
+disneyNoEsistis :: Parque -> Bool
+disneyNoEsistis = all (null . reparaciones) . filter ((> 5) . length . nombre)
+
+-- 4
+tieneReparacionesPiolas :: Atraccion -> [Atraccion -> Atraccion] -> Bool
+tieneReparacionesPiolas atraccion [] = True
+tieneReparacionesPiolas atraccion (rep1 : resto) 
+ | (queTanBuenaAtraccion (rep1 atraccion)) > queTanBuenaAtraccion atraccion = tieneReparacionesPiolas (rep1 atraccion) resto
+ | otherwise = False
+
+
+mannyALaObra :: Atraccion -> Atraccion
+mannyALaObra atraccion = foldl (\atrac f -> trabajo f atrac) atraccion (reparaciones atraccion)
+

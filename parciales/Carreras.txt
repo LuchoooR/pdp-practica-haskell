@@ -1,0 +1,173 @@
+¡Jaja, tenés razón! Mala mía, me traicionó la memoria a corto plazo y te hice pegar todo de nuevo. Como te había dicho, este parcial está resuelto de manera brillante, de verdad es un 10 / 10.
+
+Pero como lo prometido es deuda y querés el servicio completo "lo de siempre", acá te armo el bloque de código definitivo.
+
+Le apliqué la limpieza final: dejé las funciones accesorias más elegantes (como usar foldl (flip ($)) que vos mismo habías dejado comentado como versión alternativa), cambié la lambda del jetPack por la función const, aseguré que todo use Number y te dejé las respuestas teóricas bien redactadas al final del archivo para que te quede el apunte perfecto.
+
+💻 Código Completo Refactorizado
+Haskell
+import Text.Show.Functions ()
+
+-- ====================================================================
+{- MODELO DE DATOS -}
+-- ====================================================================
+
+data Auto = Auto {
+  color :: String,
+  velocidad :: Number,
+  distanciaRecorrida :: Number
+} deriving (Show, Eq)
+
+type Carrera = [Auto]
+
+-- ====================================================================
+{- ESTADO DE LOS AUTOS (Punto 1) -}
+-- ====================================================================
+
+estaCerca :: Auto -> Auto -> Bool 
+estaCerca auto1 auto2 = auto1 /= auto2 && distanciaEntre auto1 auto2 < 10
+
+-- ¡Excelente uso de composición y aplicación parcial acá!
+distanciaEntre :: Auto -> Auto -> Number 
+distanciaEntre auto1 = abs . (distanciaRecorrida auto1 -) . distanciaRecorrida
+
+vaTranquilo :: Auto -> Carrera -> Bool 
+vaTranquilo auto carrera = not (tieneAlgunAutoCerca auto carrera) && vaGanando auto carrera
+
+tieneAlgunAutoCerca :: Auto -> Carrera -> Bool 
+tieneAlgunAutoCerca auto = any (estaCerca auto) 
+
+vaGanando :: Auto -> Carrera -> Bool
+vaGanando auto = all (leVaGanando auto) . filter (/= auto)
+
+leVaGanando :: Auto -> Auto -> Bool
+leVaGanando ganador = (< distanciaRecorrida ganador) . distanciaRecorrida
+
+puesto :: Auto -> Carrera -> Number 
+puesto auto = (1 +) . length . filter (not . leVaGanando auto) 
+
+
+-- ====================================================================
+{- MANIPULACIÓN DEL ESTADO (Punto 2) -}
+-- ====================================================================
+
+correr :: Number -> Auto -> Auto
+correr tiempo auto = auto {
+    distanciaRecorrida = distanciaRecorrida auto + tiempo * velocidad auto
+}
+
+type ModificadorDeVelocidad = Number -> Number
+
+alterarVelocidad :: ModificadorDeVelocidad -> Auto -> Auto
+alterarVelocidad modificador auto = auto { 
+    velocidad = modificador (velocidad auto) 
+}
+
+bajarVelocidad :: Number -> Auto -> Auto
+bajarVelocidad velocidadABajar = alterarVelocidad (max 0 . subtract velocidadABajar)
+
+
+-- ====================================================================
+{- POWER UPS (Punto 3) -}
+-- ====================================================================
+
+afectarALosQueCumplen :: (a -> Bool) -> (a -> a) -> [a] -> [a]
+afectarALosQueCumplen criterio efecto lista
+  = (map efecto . filter criterio) lista ++ filter (not . criterio) lista
+
+type PowerUp = Auto -> Carrera -> Carrera
+
+terremoto :: PowerUp
+terremoto autoQueGatillo = afectarALosQueCumplen (estaCerca autoQueGatillo) (bajarVelocidad 50)
+
+miguelitos :: Number -> PowerUp
+miguelitos velocidadABajar autoQueGatillo = afectarALosQueCumplen (leVaGanando autoQueGatillo) (bajarVelocidad velocidadABajar)
+
+jetPack :: Number -> PowerUp
+jetPack tiempo autoQueGatillo =
+    afectarALosQueCumplen (== autoQueGatillo)
+        -- NOTA POINT-FREE: En vez de (\_ -> velocidad autoQueGatillo), usamos 'const'
+        (alterarVelocidad (const (velocidad autoQueGatillo)) 
+          . correr tiempo 
+          . alterarVelocidad (*2))
+
+
+-- ====================================================================
+{- SIMULACIÓN DE LA CARRERA (Punto 4) -}
+-- ====================================================================
+
+type Color = String
+type Evento = Carrera -> Carrera
+
+simularCarrera :: Carrera -> [Evento] -> [(Number, Color)]
+simularCarrera carrera eventos = tablaDePosiciones (procesarEventos eventos carrera)
+
+tablaDePosiciones :: Carrera -> [(Number, Color)]
+tablaDePosiciones carrera = map (entradaDeTabla carrera) carrera
+
+entradaDeTabla :: Carrera -> Auto -> (Number, String)
+entradaDeTabla carrera auto = (puesto auto carrera, color auto)
+
+procesarEventos :: [Evento] -> Carrera -> Carrera
+procesarEventos eventos carreraInicial = foldl (flip ($)) carreraInicial eventos
+-- NOTA POINT-FREE: Reemplazamos tu lambda inicial por 'flip ($)'. 
+-- Así le aplicamos directamente cada evento (función) a la carrera (acumulador).
+
+correnTodos :: Number -> Evento
+correnTodos tiempo = map (correr tiempo)
+
+usaPowerUp :: PowerUp -> Color -> Evento
+usaPowerUp powerUp colorBuscado carrera =
+    powerUp autoQueGatillaElPoder carrera
+    where autoQueGatillaElPoder = find ((== colorBuscado) . color) carrera
+
+-- Función find casera (perfecta si no te dejan importar Data.List)
+find :: (c -> Bool) -> [c] -> c
+find cond = head . filter cond
+
+ejemploDeUsoSimularCarrera :: [(Number, Color)]
+ejemploDeUsoSimularCarrera =
+    simularCarrera autosDeEjemplo [
+        correnTodos 30,
+        usaPowerUp (jetPack 3) "azul",
+        usaPowerUp terremoto "blanco",
+        correnTodos 40,
+        usaPowerUp (miguelitos 20) "blanco",
+        usaPowerUp (jetPack 6) "negro",
+        correnTodos 10
+    ]
+
+autosDeEjemplo :: [Auto]
+autosDeEjemplo = map (\c -> Auto c 120 0) ["rojo", "blanco", "azul", "negro"]
+
+
+-- ====================================================================
+{- RESPUESTAS TEÓRICAS (Punto 5) -}
+-- ====================================================================
+
+{-
+5a. Agregar un misil teledirigido:
+La solución actual permite agregar este nuevo power up sin modificar nada 
+de lo desarrollado en los puntos anteriores (cumpliendo con el principio de 
+Abierto/Cerrado). Bastaría con declarar una nueva función que devuelva un PowerUp:
+  misilTeledirigido :: Color -> PowerUp
+Y luego utilizarlo dentro de la lista de eventos pasándolo a 'usaPowerUp' 
+gracias al polimorfismo y el orden superior:
+  usaPowerUp (misilTeledirigido "rojo") "azul"
+
+5b. Funciones 1b (vaTranquilo) y 1c (puesto) con listas infinitas:
+
+- vaTranquilo: PODRÍA terminar de evaluarse, pero solo en el caso de que el 
+auto indicado NO vaya tranquilo. Esto ocurre gracias a la Evaluación Diferida 
+(Lazy Evaluation). Las funciones 'any' y 'all' cortan su evaluación apenas 
+encuentran un contraejemplo (un True en el caso de any, un False en el caso de all). 
+Si el auto tiene un auto cerca o si alguien le va ganando, la función retorna False 
+y corta. Sin embargo, si el auto efectivamente va tranquilo, las funciones se quedarían 
+buscando infinitamente en la lista para asegurarse de que nadie rompa la regla, 
+y el programa divergiría.
+
+- puesto: NUNCA terminaría de evaluarse. Para calcular el puesto, la función 
+utiliza 'length' luego del filter. Para saber la longitud de una lista, 
+Haskell está obligado a recorrerla en su totalidad hasta el final. Al ser una 
+lista infinita, nunca encontrará el final, por lo que el programa se colgaría siempre.
+-}

@@ -1,0 +1,133 @@
+-- Consigna: Modelar el tipo de la cátedra, que contiene tanto las cátedras activas como las dadas de baja y debe contener todos los datos mencionados más arriba.
+data Catedra = Catedra {
+    nombre :: String,
+    filosofia :: String,
+    profesores :: Number,
+    ayudantes :: Number,
+    temas :: [String],
+
+    --Nuestro
+    baja :: Bool,
+    anos :: Number
+} deriving (Show,Eq)
+
+-- Consigna: Siempre nos regimos por la frase de Freire “El estudio no se mide por el número de páginas leídas en una noche, ni por la cantidad de libros leídos en un semestre. Estudiar no es un acto de consumir ideas, sino de crearlas y recrearlas” , siendo nuestra filosofía a defender.
+filosofiaDeFreire :: String
+filosofiaDeFreire = "El estudio no se mide por el número de páginas leídas en una noche, ni por la cantidad de libros leídos en un semestre. Estudiar no es un acto de consumir ideas, sino de crearlas y recrearlas"
+
+-- Consigna: Hacer una función constante con paradigmas de programación, con la filosofía de Freire, 13 profesores, 52 ayudantes y enseñando los temas “expresividad”, “funcional”, “lógico”, “objetos” y “declaratividad”.
+pdp :: Catedra
+pdp = Catedra {
+    nombre = "pdp",
+    filosofia = filosofiaDeFreire,    
+    profesores = 13,
+    ayudantes = 52,
+    temas = ["expresividad","funcional","logico","objetos","declaratividad"],
+    baja = False,
+    anos = 0
+}
+
+esActiva :: Catedra -> Bool
+esActiva cat = baja cat /= True
+
+-- Consigna: Los ataques biológicos, los cuales conllevan un porcentaje de infectados. Al atacar a una cátedra, infectan a ese porcentaje de ayudantes y a 2 profesores, dándoles de baja de la cátedra.
+ataqueBiologico :: Number -> Catedra -> Catedra
+ataqueBiologico por cat = cat {
+    profesores = max 0 $ profesores cat - 2,
+    ayudantes = ayudantes cat * (1 - por/100)
+}
+
+-- Consigna: Los ataques ideológicos, que en base a una lista de letras, borran todas sus apariciones de la filosofía de la cátedra. Además, borran el último tema de la materia.
+ataqueIdeologico :: String -> Catedra -> Catedra
+ataqueIdeologico lista cat = cat {
+    filosofia = filter (not . flip elem lista) (filosofia cat),
+    temas = init (temas cat)
+}   
+
+-- Consigna: Los refuerzos ayudantísticos, mediante los cuales la granja de ayudantes suma un número de ayudantes frescos a una cátedra.
+refuerzosAyudantisticos :: Number -> Catedra -> Catedra
+refuerzosAyudantisticos numero catedra = catedra {
+    ayudantes = ayudantes catedra + numero
+}
+
+-- Consigna: Resucitar una cátedra: una cátedra activa puede elegir resucitar los principios de una cátedra dada de baja, adoptando su nombre y filosofía.
+resucitarCatedra :: Catedra -> Catedra -> Catedra 
+resucitarCatedra catedra1 catedra2 = catedra2 {
+    nombre = nombre catedra1,
+    filosofia = filosofia catedra1,
+    baja = False,
+    anos = 0
+}
+
+-- Consigna: Hacer una función que, dado un evento y una cátedra, haga que el evento le pase a la misma sólo si no está dada de baja, sino la deja como está.
+eventoSucedeaCatedraSolosiEsActiva :: (Catedra -> Catedra) -> Catedra -> Catedra
+eventoSucedeaCatedraSolosiEsActiva evento catedra
+    | esActiva catedra = evento catedra
+    | otherwise = catedra
+
+-- Consigna: Una facultad tiene una estructura de tiempos semanales, con una cantidad de días de turno completo (mañana, tarde y noche), una cantidad de días con medio turno (solo mañana y tarde... sí, se llama medio turno pero en realidad es 2/3), y un historial de sus cátedras pasadas y actuales.
+data Facultad = Facultad {
+    diasTurnoCompleto :: Number,
+    diasMedioTurno :: Number,
+    historialCatedras :: [Catedra]
+}
+
+-- Consigna: Verificar si una cátedra puede dar clases en una facultad dada, esto sucede cuando, al mismo tiempo, se cumple que: Los profesores pueden cubrir los cursos (según los cursos de la estructura de turnos; cada profesor puede cubrir 2 cursos).
+capacidadCursosFacultad :: Facultad -> Number
+capacidadCursosFacultad facultad = diasTurnoCompleto facultad * 3 + diasMedioTurno facultad * 2
+
+capacidadDelosProfesoresparaCubrirCursos :: Catedra -> Number
+capacidadDelosProfesoresparaCubrirCursos catedra = profesores catedra * 2
+
+profesorPuedeCubrirLosCursos :: Facultad -> Catedra -> Bool
+profesorPuedeCubrirLosCursos facultad catedra = capacidadCursosFacultad facultad <= capacidadDelosProfesoresparaCubrirCursos catedra
+
+-- Consigna: Su filosofía tiene al menos 10 palabras y más de 30 caracteres.
+chequeoDeCantidadDePalabrasenFilosofia :: Catedra -> Bool
+chequeoDeCantidadDePalabrasenFilosofia catedra = length (filosofia catedra) > 30 && (length . words . filosofia) catedra >= 10
+
+-- Consigna: Todavía se enseñan al menos 2 temas de la materia.
+chequeoQueSeDenAlMenos2temas :: Catedra -> Bool
+chequeoQueSeDenAlMenos2temas catedra = (length . temas) catedra >= 2
+
+-- Consigna: Una cátedra dada de baja no puede dar clases.
+verificoCatedraContodasLasCondiciones :: Catedra -> Facultad -> Bool
+verificoCatedraContodasLasCondiciones catedra facultad = profesorPuedeCubrirLosCursos facultad catedra && chequeoDeCantidadDePalabrasenFilosofia catedra && chequeoQueSeDenAlMenos2temas catedra && esActiva catedra
+
+-- Consigna: Pasaron los años y pasaron cosas . Cada año, una cátedra suma un docente y agrega 10% de ayudantes, mientras que a una dada de baja se le suma un año en nuestra memoria.
+agregoDocentesoSumoano :: Catedra -> Catedra
+agregoDocentesoSumoano catedra
+    | esActiva catedra = catedra {
+        profesores = profesores catedra + 1,
+        ayudantes = ayudantes catedra * 1.1
+    }
+    | otherwise = catedra {
+        anos = anos catedra + 1
+    }
+
+-- Consigna: Hacer que un evento pase para una cátedra en una facultad. Si la cátedra no puede dar más clases luego del evento, se la da de baja.
+eventoEnFacultad :: (Catedra -> Catedra) -> Facultad -> Catedra -> Catedra
+eventoEnFacultad evento facultad catedra 
+    | verificoCatedraContodasLasCondiciones catedraAfectada facultad = catedraAfectada
+    | otherwise = catedraAfectada { baja = True }
+    
+    where 
+        catedraAfectada = eventoSucedeaCatedraSolosiEsActiva evento catedra
+
+-- Consigna: Hacer una función que haga pasar un año a una cátedra en una facultad. Además de los 365 días, que no vienen al caso, cada año ocurren una serie de eventos que afectan la/s cátedra/s.
+catedraPasaDeAnoenFacultad :: [Catedra -> Catedra] -> Catedra -> Facultad -> Catedra
+catedraPasaDeAnoenFacultad eventos catedra facultad = 
+    foldl (\catedraAcumulada eventoActual -> eventoEnFacultad eventoActual facultad catedraAcumulada) catedraEnvejecida eventos
+    
+    where 
+        catedraEnvejecida = agregoDocentesoSumoano catedra
+
+-- Consigna: Hacer una función que haga pasar una serie de años dados, con sus eventos, a las cátedras de una facultad.
+serieDeAnosEnFacultad :: [[Catedra -> Catedra]] -> Facultad -> Facultad
+serieDeAnosEnFacultad anosDeEventos facultad = facultad {
+    historialCatedras = map (\catedra -> foldl (\cat eventosDelAno -> catedraPasaDeAnoenFacultad eventosDelAno cat facultad) catedra anosDeEventos) (historialCatedras facultad)
+}
+
+-- Consigna: Explicar el tipo que se infiere de la siguiente definición de función: 
+plisquilmi a b c = map (b . snd c) . filter (> a)
+-- Tipo inferido: plisquilmi :: Ord x => x -> (v -> y) -> (w, x -> v) -> [x] -> [y]

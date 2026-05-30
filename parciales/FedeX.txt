@@ -1,22 +1,35 @@
-data Envio = Envio{
+-- ====================================================================
+{- CONSIGNA:
+Crear el modelo necesario que mejor se adapte para la solución.
+Además indique el tipo de un cargo y de un impuesto.
+-}
+-- ====================================================================
+
+data Envio = Envio {
     lugarDeOrigen :: Lugar,
     lugarDeDestino :: Lugar,
     peso :: Number,
     precioBase :: Number,
     categorias :: [String],
     impuestos :: [Impuesto]
-} 
+} deriving (Show)
 
-data Lugar = Lugar{
+data Lugar = Lugar {
     ciudad :: String,
     pais :: String
-} 
+} deriving (Show)
 
 type Cargo = Envio -> Number
 type Impuesto = Number -> Envio -> Number
 
-cargoArbitario :: Cargo
-cargoArbitario _ = 50
+-- ====================================================================
+{- CONSIGNA:
+Existen cargos extras que afectan el precio base del envío...
+-}
+-- ====================================================================
+
+cargoArbitrario :: Cargo
+cargoArbitrario _ = 50
 
 cargoCategorico :: String -> Number -> Cargo
 cargoCategorico categoria porcentaje envio 
@@ -29,31 +42,40 @@ cargoPorSobrepeso kg envio
  | otherwise = sumarPesoPorKg kg envio
 
 sumarPesoPorKg :: Number -> Envio -> Number
-sumarPesoPorKg kg envio = ((*80) (peso envio - kg))
+sumarPesoPorKg kg envio = (peso envio - kg) * 80
 
--------
+
+-- ====================================================================
+{- CONSIGNA:
+Además, los impuestos, que aplican sobre el precio bruto...
+-}
+-- ====================================================================
+
 iVA :: Impuesto
 iVA precioBruto _ = precioBruto * 0.20
 
-multicagoria :: Impuesto
-multicagoria precioBruto envio 
- | length(categorias envio) > 3 = precioBruto * 0.01
+multicategoria :: Impuesto
+multicategoria precioBruto envio 
+ | length (categorias envio) > 3 = precioBruto * 0.01
  | otherwise = 0
 
 aduanero :: Impuesto 
 aduanero precioBruto envio 
- | esInternacional envio = precioBruto *0.03
+ | esInternacional envio = precioBruto * 0.03
  | otherwise = 0
 
-impuestoExtraño :: Impuesto
-impuestoExtraño precioBruto _ 
+impuestoExtrano :: Impuesto
+impuestoExtrano precioBruto _ 
  | mod precioBruto 2 == 0 = precioBruto * 0.10
  | otherwise = 0
 
 esInternacional :: Envio -> Bool
-esInternacional envio 
- | pais (lugarDeDestino envio) /= pais (lugarDeOrigen envio) = True
- | otherwise = False
+esInternacional envio = pais (lugarDeDestino envio) /= pais (lugarDeOrigen envio)
+
+
+-- ====================================================================
+-- FUNCIONES DE CÁLCULO DE PRECIO 
+-- ====================================================================
 
 calcularPrecioBruto :: [Cargo] -> Envio -> Number
 calcularPrecioBruto cargos envio = precioBase envio + sum (map ($ envio) cargos)
@@ -67,88 +89,114 @@ aplicarImpuestos precioBruto envio = (+ precioBruto) . sum $ map (aplicarUnImpue
 calcularPrecioTotal :: Envio -> [Cargo] -> Number
 calcularPrecioTotal envio cargos = aplicarImpuestos (calcularPrecioBruto cargos envio) envio 
 
---2
---a
-cargoTecnologia ::  Cargo
+
+-- ====================================================================
+{- CONSIGNA PUNTO 2: Modelar con funciones constantes
+Un cargo categórico de “tecnología” de 18%.
+Envío Buenos Aires -> Utrecht. Envío California -> Miami.
+-}
+-- ====================================================================
+
+cargoTecnologia :: Cargo
 cargoTecnologia = cargoCategorico "tecnología" 0.18
 
---b
 envioBuenosAires :: Envio
-envioBuenosAires = Envio{
-    lugarDeOrigen = Lugar{
-        ciudad = "Buenos Aires",
-        pais = "Argentina"
-    },
-    lugarDeDestino = Lugar{
-        ciudad = "Utrecht",
-        pais = "Paises Bajos"
-    },
+envioBuenosAires = Envio {
+    lugarDeOrigen = Lugar "Buenos Aires" "Argentina",
+    lugarDeDestino = Lugar "Utrecht" "Paises Bajos",
     peso = 2,
     precioBase = 220,
-    categorias = ["teconología", "musica"],
+    categorias = ["tecnología", "musica"],
     impuestos = []
 }
 
---c
 envioCalifornia :: Envio
-envioCalifornia = Envio{
-    lugarDeOrigen = Lugar{
-        ciudad = "California",
-        pais = "Estados Unidos"
-    },
-    lugarDeDestino = Lugar{
-        ciudad = "Miami",
-        pais = "Estado Unidos"
-    },
+envioCalifornia = Envio {
+    lugarDeOrigen = Lugar "California" "Estados Unidos",
+    lugarDeDestino = Lugar "Miami" "Estados Unidos",
     peso = 5,
     precioBase = 1500,
-    categorias = [ "Libros"],
-    impuestos = [iVA, impuestoExtraño]
+    categorias = ["Libros"],
+    impuestos = [iVA, impuestoExtrano]
 }
 
 
---3
---a
-cuestaMas :: Number -> Envio -> Bool
-cuestaMas numero envio 
- | precioBase envio > numero = True
- | otherwise = False
+-- ====================================================================
+{- CONSIGNA PUNTO 3: Sobre el precio...
+Saber si el precio base de un envío cuesta más que un valor determinado N.
+Conocer si un envío es barato ($1300 o menos).
+-}
+-- ====================================================================
 
+cuestaMas :: Number -> Envio -> Bool
+cuestaMas numero = (> numero) . precioBase
 
 esBarato :: Envio -> Bool
-esBarato envio 
- | precioBase envio <= 1300 = True 
- | otherwise = False
+esBarato = (<= 1300) . precioBase
 
 
---4
---a
+-- ====================================================================
+{- CONSIGNA PUNTO 4: Sobre los lugares...
+Saber si un envío se dirige a un país determinado.
+Determinar si es local o es internacional.
+-}
+-- ====================================================================
+
 seDirigeA :: String -> Envio -> Bool
-seDirigeA paisprobable envio 
- | pais (lugarDeDestino envio) == paisprobable = True
- | otherwise = False
+seDirigeA paisProbable = (== paisProbable) . pais . lugarDeDestino
 
-
---b
 esLocal :: Envio -> Bool
-esLocal envio = not $ esInternacional envio
-
---5
-obtenerPedidosConCategoria :: [Envio] -> [Envio]
-obtenerPedidosConCategoria [] = []
-obtenerPedidosConCategoria (x:xs)
- | length (categorias x) > 0 = (x: obtenerPedidosConCategoria xs)
- | otherwise = (obtenerPedidosConCategoria xs)
-
---6
--- esta hecho más arriba
+esLocal = not . esInternacional
 
 
---7
+-- ====================================================================
+{- CONSIGNA PUNTO 5:
+A partir de un conjunto de envíos, obtener aquellos que tienen ciertas categorías.
+(Sin lambdas, ni recursividad, ni definiciones locales).
+-}
+-- ====================================================================
+
+obtenerPedidosConCategoria :: String -> [Envio] -> [Envio]
+obtenerPedidosConCategoria categoriaBuscada = filter (elem categoriaBuscada . categorias)
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 7:
+Determinar, para un envío dado, el cargo más doloroso de una lista, 
+que es aquel que produce un incremento de precio total mayor individualmente.
+-}
+-- ====================================================================
+
 elCargoMasDoloroso :: Envio -> [Cargo] -> Cargo
-elCargoMasDoloroso envio cargos = map ($ envio) cargos
+elCargoMasDoloroso _ [cargoUnico] = cargoUnico
+elCargoMasDoloroso envio (cargo1:cargo2:restoCargos)
+ | cargo1 envio > cargo2 envio = elCargoMasDoloroso envio (cargo1:restoCargos)
+ | otherwise = elCargoMasDoloroso envio (cargo2:restoCargos)
 
 
---8
-whatever :: () -> (a -> b) ->  -- ni idea
-whatever x y z = z x . filter ((x==) . y) 
+-- ====================================================================
+{- CONSIGNA PUNTO 8:
+Explicar el tipo de la siguiente función:
+whatever x y z  = z x . filter ((x==) . y) 
+-}
+-- ====================================================================
+
+whatever :: Eq a => a -> (b -> a) -> (a -> [b] -> c) -> [b] -> c
+whatever x y z = z x . filter ((x==) . y)
+
+{- EXPLICACIÓN A AGREGAR EN EL PARCIAL:
+1. 'x': Se utiliza dentro de '(x==)'. Como se está comparando por igualdad, 'x' debe 
+   pertenecer a la Typeclass 'Eq'. Entonces: x :: a (con Eq a).
+2. 'y': Está compuesta con '(x==)'. La salida de 'y' entra en la comparación con 'x'. 
+   Por lo tanto, 'y' devuelve tipo 'a'. Como 'y' se usa en la condición de un 'filter', 
+   tiene que recibir los elementos de una lista genérica 'b'. Entonces: y :: (b -> a).
+3. 'filter': Sabemos que devuelve una lista. En este caso, filtró elementos 'b', por 
+   lo que toda la parte derecha del '.' (la composición) devuelve una lista '[b]'.
+4. 'z': Está a la izquierda de la composición, aplicándose a 'x'. Entonces 'z' recibe 
+   'a' en primer lugar. Además, como está compuesto con el filter mediante (.), lo que 
+   retorna (z x) tiene que ser una función que esté esperando recibir la lista '[b]' 
+   que le tira el filter. Y finalmente devolverá algo genérico 'c'.
+   Por lo tanto: z :: a -> ([b] -> c).
+5. Función completa: Recibe x (a), y (b -> a), z (a -> [b] -> c) y, al ser una 
+   composición que procesa listas, recibe una lista '[b]' para devolver el resultado final 'c'.
+-}

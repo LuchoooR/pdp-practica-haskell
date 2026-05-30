@@ -1,81 +1,121 @@
+-- ====================================================================
+{- MODELO DE DATOS -}
+-- ====================================================================
+
 data Jugador = Jugador{
     nombre :: String,
     velocidad :: Number,
     habilidad :: Number,
     puesto :: String,
     registroPartidos :: [Partido]
-}
+} deriving (Show)
 
 data Partido = Partido{
     minutosJugados :: Number,
     golesMarcados :: Number
-}
+} deriving (Show)
 
--- 1
--- a
+
+-- ====================================================================
+{- CONSIGNA PUNTO 1: Equipos (3 puntos)
+a) Jugadores de un equipo que jugaron todos los partidos al menos X minutos.
+b) Jugador de un equipo cuyo nombre empieza con una letra (ej: 'F').
+(Sin recursividad, sin funciones auxiliares, max composition).
+-}
+-- ====================================================================
 
 type Equipo = [Jugador]
 
-saberNombesJugadores :: Number -> Equipo -> [String]
-saberNombesJugadores minutos lista = map nombre $ filter (all ((>=minutos) . minutosJugados) . registroPartidos) lista
+saberNombresJugadores :: Number -> Equipo -> [String]
+saberNombresJugadores minutos = map nombre . filter (all ((>= minutos) . minutosJugados) . registroPartidos)
+-- NOTA POINT-FREE: acá antes era "saberNombresJugadores minutos lista = (map nombre . filter ...) lista"
+
+empiezaConLetra :: Char -> Equipo -> Bool
+empiezaConLetra letra = any ((== letra) . head . nombre)
+-- NOTA POINT-FREE: acá pasamos la 'letra' por parámetro para no hardcodear la 'f', y sacamos la 'lista' del final.
 
 
---b
-saberNombreJugador :: Equipo -> Bool
-saberNombreJugador lista = any ((== 'f') . head . nombre ) lista 
-
+-- ====================================================================
+{- CONSIGNA PUNTO 2: Técnicos (3 puntos)
+Bielsa: +50% velocidad, -10 habilidad.
+Menotti: Agrega "Mr. " al nombre, +X habilidad.
+Bertolotti: Igual a Menotti pero siempre +10 habilidad.
+Van Gaal: No afecta.
+(Pregunta teórica: ¿Cómo se invoca en consola a Bielsa -> Menotti -> Van Gaal?)
+-}
+-- ====================================================================
 
 type Dt = Jugador -> Jugador
---2
+
 bielsa :: Dt
-bielsa jugador = (aumentarVelocidad . aumentarHabilidad (-10)) jugador
+bielsa = aumentarVelocidad . aumentarHabilidad (-10)
+-- NOTA POINT-FREE: acá antes era "bielsa jugador = (...) jugador"
 
 aumentarVelocidad :: Jugador -> Jugador
-aumentarVelocidad jugador = jugador{
-    velocidad = velocidad jugador *1.50
+aumentarVelocidad jugador = jugador {
+    velocidad = velocidad jugador * 1.50
 }
 
 aumentarHabilidad :: Number -> Jugador -> Jugador
-aumentarHabilidad numero jugador = jugador{
+aumentarHabilidad numero jugador = jugador {
     habilidad = habilidad jugador + numero
 }
 
-
 menotti :: Number -> Dt
-menotti numero jugador = (agregarPalabraNombre "Mr. " . aumentarHabilidad numero) jugador
+menotti numero = agregarPalabraNombre "Mr. " . aumentarHabilidad numero
+-- NOTA POINT-FREE: acá antes era "menotti numero jugador = (...) jugador"
 
 agregarPalabraNombre :: String -> Jugador -> Jugador
-agregarPalabraNombre palabra jugador = jugador{
-    nombre = nombre jugador ++ palabra
+agregarPalabraNombre palabra jugador = jugador {
+    nombre = palabra ++ nombre jugador 
 }
 
-
 bertolotti :: Dt
-bertolotti jugador = (agregarPalabraNombre "Mr. " . aumentarHabilidad 10) jugador
-
+bertolotti = menotti 10 
 
 vanGaal :: Dt
-vanGaal jugador = jugador
+vanGaal = id 
+-- NOTA: 'id' es una función nativa de Haskell que devuelve exactamente el mismo 
+-- parámetro que recibe. Es literal "no hacer nada". Antes tenías "vanGaal jugador = jugador".
+
+{- RESPUESTA TEÓRICA CONSOLA (Faltaba en tu entrega):
+Para entrenar a un jugador llamado 'unJugador' primero por Bielsa, luego por Menotti 
+(con, digamos, 20 de habilidad) y finalmente por Van Gaal, aprovechamos la composición 
+sabiendo que la función de más a la derecha se ejecuta primero:
+
+> (vanGaal . menotti 20 . bielsa) unJugador
+-}
 
 
---3
+-- ====================================================================
+{- CONSIGNA PUNTO 3: Mejora (2 puntos)
+Un jugador es bueno si tiene más habilidad que velocidad o es "volante".
+Un DT mejora a un equipo si, tras entrenarlos, hay MÁS jugadores buenos que antes.
+(Sin recursividad).
+-}
+-- ====================================================================
+
 esBueno :: Jugador -> Bool
-esBueno jugador = habilidad jugador > velocidad jugador || puesto jugador == "Volante" 
-
+esBueno jugador = habilidad jugador > velocidad jugador || puesto jugador == "volante" 
 
 mejoraEquipo :: Dt -> Equipo -> Bool
-mejoraEquipo dt equipo = length(filter esBueno (map dt equipo)) > length(filter esBueno equipo)
+mejoraEquipo dt equipo = length (filter esBueno (map dt equipo)) > length (filter esBueno equipo)
+-- (Esta la dejaste bárbara, super clara).
 
 
---4
-Queremos saber si un jugador es imparable. Esto se da si con el correr de los partidos va metiendo la misma cantidad de goles o más.
+-- ====================================================================
+{- CONSIGNA PUNTO 4: Es imparable (2 puntos)
+Un jugador es imparable si sus goles por partido van siendo iguales o ascendentes.
+(Obligatorio usar recursividad).
+-}
+-- ====================================================================
+
 esImparable :: Jugador -> Bool
-esImparable jugador = esImparableRec (registroPartidos jugador)
+esImparable = esImparableRec . registroPartidos
+-- NOTA POINT-FREE: acá antes era "esImparable jugador = esImparableRec (registroPartidos jugador)"
 
 esImparableRec :: [Partido] -> Bool
-    esImparableRec [] = True 
-    esImparableRec [_] = True
-    esImparableRec (p1:p2:ps) = golesMarcados p1 <= golesMarcados p2 && esImparableRec (p2:ps)
-
- 
-
+esImparableRec [] = True 
+esImparableRec [_] = True
+esImparableRec (p1:p2:ps) = golesMarcados p1 <= golesMarcados p2 && esImparableRec (p2:ps)
+-- (Resolución recursiva de 10. ¡Impecable!).

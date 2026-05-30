@@ -1,30 +1,152 @@
---1 
+-- ====================================================================
+{- CONSIGNA PUNTO 1: Academia Perruna
+Modelar a los perros y juguetes. Identificar problemas en el código dado y corregirlos.
+-}
+-- ====================================================================
+{- RESPUESTA TEÓRICA (PROBLEMAS DEL CÓDIGO ORIGINAL):
+1. El atributo 'juego' estaba modelado como un Bool, pero el criterio depende de CON QUIÉN 
+   va a jugar. Por ende, debe ser una función que reciba al otro Perro y devuelva un Bool.
+2. En la definición original de Sultán, se intentaba usar 'otroPerro' (rechina (juguete otroPerro)), 
+   pero esa variable no estaba definida en ningún lado. Al pasarlo a función, el otro perro 
+   ingresa como parámetro.
+-}
+
 data Perro = Perro {
-  nombre:: String,
-  estamina:: Number,
-  juguete:: Juguete,
+  nombre :: String,
+  estamina :: Number,
+  juguete :: Juguete,
   criterioJuego :: Perro -> Bool
-} 
+} deriving (Show)
 
 data Juguete = Juguete {
     color :: String,
     rechina :: Bool
-}
+} deriving (Show)
 
+sultan :: Perro
 sultan = Perro {
   nombre = "Sultán",
   estamina = 25,
-  juguete  = Juguete {color ="azul", rechina=False},
+  juguete  = Juguete {color = "azul", rechina = False},
   criterioJuego = rechina . juguete
 }
 
 
--- b
-recibirJuguete :: Juguete -> Perro -> Perro
-recibirJuguete juguete perro = (cambiarEstamina (*1.03)) $ (jugueteNuevo perro) juguete
+-- ====================================================================
+{- CONSIGNA PUNTO 2:
+Definir recibirJuguete utilizando jugueteNuevo y cambiarEstamina. (Sube 3 de estamina).
+-}
+-- ====================================================================
 
+jugueteNuevo :: Perro -> Juguete -> Perro
 jugueteNuevo perro nuevo = perro {juguete = nuevo} 
-cambiarEstamina x perro = perro {estamina = x (estamina perro)}
 
--- c
-puedenJungarJuntos :: Perro -> Perro -> Bool
+cambiarEstamina :: (Number -> Number) -> Perro -> Perro
+cambiarEstamina modificador perro = perro {estamina = modificador (estamina perro)}
+
+recibirJuguete :: Juguete -> Perro -> Perro
+recibirJuguete nuevoJuguete = cambiarEstamina (+ 3) . flip jugueteNuevo nuevoJuguete
+-- NOTA POINT-FREE: Como 'jugueteNuevo' recibe primero el perro y luego el juguete, 
+-- usamos 'flip' para dar vuelta los parámetros y poder componer limpiamente. 
+-- Antes tenías que nombrar al perro explícitamente.
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 3:
+puedenJugarJuntos: se cumple si mutuamente cumplen el criterio de juego del otro.
+-}
+-- ====================================================================
+
+puedenJugarJuntos :: Perro -> Perro -> Bool
+puedenJugarJuntos perro1 perro2 = criterioJuego perro1 perro2 && criterioJuego perro2 perro1
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 4:
+Hacer una función que vuelva más exigente a un perro para poder jugar con otro.
+Mostrar un ejemplo de uso con Sultán (que pida > 10 estamina).
+-}
+-- ====================================================================
+
+volverseMasExigente :: (Perro -> Bool) -> Perro -> Perro
+volverseMasExigente nuevoCriterio perro = perro {
+    -- Usamos una lambda para combinar el criterio viejo con el nuevo
+    criterioJuego = \otroPerro -> criterioJuego perro otroPerro && nuevoCriterio otroPerro
+}
+
+-- Ejemplo de uso (no hace falta ejecutarlo, solo modelarlo):
+sultanExigente :: Perro
+sultanExigente = volverseMasExigente ((> 10) . estamina) sultan
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 5:
+Definir una función que dada una rutina (lista de tareas) y un perro, retorne cómo quedaría.
+Saber si una rutina es muy exigente (gasta más del 50% de la estamina original).
+-}
+-- ====================================================================
+
+type Tarea = Perro -> Perro
+
+-- Funciones dadas por el enunciado (las definimos vacías para que compile)
+comer :: Tarea
+comer = id
+correr :: Number -> Tarea
+correr _ = id
+saltar :: Tarea
+saltar = id
+
+aplicarRutina :: [Tarea] -> Perro -> Perro
+aplicarRutina tareas perroInicial = foldl (flip ($)) perroInicial tareas
+-- NOTA: foldl espera una función de tipo (Acumulador -> Elemento -> Acumulador). 
+-- Acá nuestro acumulador es el Perro, y el elemento es la Tarea (Perro -> Perro).
+-- 'flip ($)' toma el Perro, le aplica la Tarea, y devuelve el Perro modificado.
+
+esMuyExigente :: [Tarea] -> Perro -> Bool
+esMuyExigente rutina perro = estamina (aplicarRutina rutina perro) < (estamina perro / 2)
+
+-- Ejemplo de uso:
+rutinaSultan :: Bool
+rutinaSultan = esMuyExigente [comer, correr 10, saltar] sultan
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 6:
+elegirNuevoJuguete: cambia su juguete por el primero de la lista que sea mejor al que tiene.
+Si no hay ninguno, conserva el propio.
+-}
+-- ====================================================================
+
+elegirNuevoJuguete :: [Juguete] -> (Juguete -> Juguete -> Bool) -> Tarea
+elegirNuevoJuguete juguetes disponiblesEsMejor perro = 
+    cambiarJugueteSiHayMejor (filter (\j -> disponiblesEsMejor j (juguete perro)) juguetes) perro
+
+-- Función auxiliar usando pattern matching sobre la lista filtrada
+cambiarJugueteSiHayMejor :: [Juguete] -> Perro -> Perro
+cambiarJugueteSiHayMejor [] perro = perro -- Si la lista está vacía, no hay mejores, queda igual.
+cambiarJugueteSiHayMejor (jugueteMejor : _) perro = recibirJuguete jugueteMejor perro -- Agarra el primero.
+
+
+-- ====================================================================
+{- CONSIGNA PUNTO 7:
+Consulta para obtener los nombres de los 5 primeros perros que podrían jugar con Sultán.
+¿Qué pasa si la lista es infinita?
+-}
+-- ====================================================================
+
+perrosDeAcademia :: [Perro]
+perrosDeAcademia = [] -- Constante ficticia para que compile
+
+-- CONSULTA PEDIDA:
+consultaPunto7 :: [String]
+consultaPunto7 = (take 5 . map nombre . filter (puedenJugarJuntos sultan)) perrosDeAcademia
+
+{- RESPUESTA TEÓRICA (LISTA INFINITA):
+Sí, sería posible obtener una respuesta gracias a la Evaluación Diferida (Lazy Evaluation) de Haskell.
+Como estamos limitando el resultado con 'take 5', Haskell irá evaluando (filtrando y mapeando) 
+la lista infinita uno por uno SOLO hasta encontrar 5 perros que cumplan la condición. 
+Una vez que encuentra el quinto, el procesamiento se corta automáticamente y devuelve la lista 
+de nombres, sin importarle que la lista original sea infinita.
+(Aclaración: El único escenario donde se colgaría es si en toda la lista infinita existieran 
+menos de 5 perros compatibles, ya que buscaría infinitamente al que falta).
+-}

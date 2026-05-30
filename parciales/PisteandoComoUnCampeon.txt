@@ -1,13 +1,22 @@
+-- ====================================================================
+{- CONSIGNA:
+Modelar el auto, teniendo en cuenta la información necesaria que lo representa. Y luego representar:
+Auto Ferrari, modelo F50, sin desgaste en su chasis y ruedas, con una velocidad máxima de 65 m/s.
+Auto Lamborghini, modelo Diablo, con desgaste 7 de chasis y 4 de ruedas, con una velocidad máxima de 73 m/s.
+Auto Fiat, modelo 600, con desgaste 33 de chasis y 27 de ruedas, con una velocidad máxima de 44 m/s.
+-}
+-- ====================================================================
+
 data Auto =  Auto {
     marca :: String,
     modelo :: String,
-    desgaste :: (Number, Number), -- (chasis, ruedas)
-    velocidadMaxima :: Number,
-    tiempoDeCarrera :: Number,
-    uso :: Number
+    desgaste :: (Float, Float), 
+    velocidadMaxima :: Float,
+    tiempoDeCarrera :: Float,
+    uso :: Float
 } 
 
--- 1 
+ferrari :: Auto
 ferrari = Auto {
     marca = "Ferrari",
     modelo = "F50",
@@ -17,104 +26,126 @@ ferrari = Auto {
     uso = 0
 }
 
+lamborghini :: Auto
 lamborghini = Auto {
     marca = "Lamborghini",
     modelo = "Diablo",
-    desgaste = (7,4), -- 7 chasis, 4 ruedas
+    desgaste = (7,4),
     velocidadMaxima = 73,
     tiempoDeCarrera = 0,
     uso = 0
 }
 
+fiat :: Auto
 fiat = Auto {
     marca = "Fiat",
     modelo = "600",
-    desgaste = (33,27), -- 33 chasis, 27 ruedas
+    desgaste = (33,27),
     velocidadMaxima = 44,
     tiempoDeCarrera = 0,
     uso = 0
 }
 
 
--- 2
--- a
+-- ====================================================================
+{- CONSIGNA:
+Estado de salud del auto:
+Saber si un auto está en buen estado, esto se da cuando el desgaste del chasis es menor a 40 y el de las ruedas es menor 60.
+Saber si un auto no da más, esto ocurre si alguno de los valores de desgaste es mayor a 80.
+-}
+-- ====================================================================
+
 esBuenEstado :: Auto -> Bool
--- fst es chasis (< 40), snd es ruedas (< 60)
-esBuenEstado auto = ((< 40) . fst . desgaste) auto  && ((< 60) . snd . desgaste) auto 
+esBuenEstado auto = fst (desgaste auto) < 40  && snd (desgaste auto) < 60
 
-
--- b 
 noDaMas :: Auto -> Bool
--- fst es chasis (> 80), snd es ruedas (> 80)
-noDaMas auto = ((> 80) . fst . desgaste) auto || ((> 80) . snd . desgaste) auto 
+noDaMas auto = fst (desgaste auto) > 80 || snd (desgaste auto) > 80
 
 
--- 3
+-- ====================================================================
+{- CONSIGNA:
+Reparar un Auto: la reparación de un auto baja en un 85% el desgaste del chasis 
+(es decir que si está en 50, lo baja a 7.5) y deja en 0 el desgaste de las ruedas.
+-}
+-- ====================================================================
+
 repararAuto :: Auto -> Auto
-repararAuto auto = bajarDesgasteChasis auto
+repararAuto = bajarDesgasteChasis 
+-- NOTA POINT-FREE: acá antes era "repararAuto auto = bajarDesgasteChasis auto"
 
 bajarDesgasteChasis :: Auto -> Auto
-bajarDesgasteChasis auto = auto{
-    -- fst es chasis (se baja un 85%, o sea queda en 0.15), snd es ruedas (queda en 0)
+bajarDesgasteChasis auto = auto {
     desgaste = (fst (desgaste auto) * 0.15 , 0)
-} 
+}
 
 
---4
--- a
+-- ====================================================================
+{- CONSIGNA:
+Modelar las funciones para representar las distintas partes de una pista...
+-}
+-- ====================================================================
+
 type Tramo = Auto -> Auto
 type Pista = [Tramo]
 
-curva :: Number -> Number -> Tramo
+curva :: Float -> Float -> Tramo
 curva angulo longitud auto = auto {
-    -- En la curva el chasis (fst) queda igual, se afectan las ruedas (snd)
     desgaste = (fst (desgaste auto), snd (desgaste auto) + (3 * longitud / angulo)),
     tiempoDeCarrera = sumarTiempoLongitud longitud auto 2
 }
 
-sumarTiempoLongitud :: Number -> Auto -> Number -> Number
-sumarTiempoLongitud longitud auto numero = tiempoDeCarrera auto + longitud / (velocidadMaxima auto / numero )
+sumarTiempoLongitud :: Float -> Auto -> Float -> Float
+sumarTiempoLongitud longitud auto divisor = tiempoDeCarrera auto + longitud / (velocidadMaxima auto / divisor)
 
--- ii
 curvaPeligrosa :: Tramo
 curvaPeligrosa = curva 60 300
 
-
--- iii
 curvaTranca :: Tramo
 curvaTranca = curva 110 550
 
 
--- b
-recto :: Number -> Tramo
+-- ====================================================================
+{- CONSIGNA:
+El tramo recto, debido a la alta velocidad se afecta el chasis del auto en una centésima 
+parte de la longitud del tramo. Suma un tiempo de longitud / velocidad máxima.
+-}
+-- ====================================================================
+
+recto :: Float -> Tramo
 recto longitud auto = auto {
-    -- En la recta se afecta el chasis (fst), las ruedas (snd) quedan igual
     desgaste = (fst (desgaste auto) + longitud * 0.01, snd (desgaste auto)),
     tiempoDeCarrera = sumarTiempoLongitud longitud auto 1
 }
 
--- ii
 tramoRectoClassic :: Tramo
 tramoRectoClassic = recto 750
 
--- iii
 tramito :: Tramo
 tramito = recto 280
 
 
--- c 
+-- ====================================================================
+{- CONSIGNA:
+Cuando pasa por un tramo Boxes...
+-}
+-- ====================================================================
+
 boxes :: Tramo -> Tramo 
 boxes tramoInterno auto 
  | esBuenEstado auto = tramoInterno auto
  | otherwise = repararAuto (sumarTiempo 10 (tramoInterno auto))
 
-sumarTiempo :: Number -> Auto -> Auto
+sumarTiempo :: Float -> Auto -> Auto
 sumarTiempo tiempo auto = auto {
     tiempoDeCarrera = tiempoDeCarrera auto + tiempo
 }
 
 
--- d
+-- ====================================================================
+{- CONSIGNA:
+Mojado, Ripio, Obstáculos...
+-}
+-- ====================================================================
 
 mojado :: Tramo -> Tramo
 mojado tramoInterno auto = aplicarEfectoMojado auto (tramoInterno auto)
@@ -126,65 +157,108 @@ aplicarEfectoMojado autoOriginal autoPasado =
 
 ripio :: Tramo -> Tramo
 ripio tramo = tramo . tramo
+-- NOTA POINT-FREE: acá antes era "ripio tramo auto = (tramo . tramo) auto"
 
-obstaculos :: Number -> Tramo -> Tramo
+
+obstaculos :: Float -> Tramo -> Tramo
 obstaculos metros tramoInterno = empeorarRuedas metros . tramoInterno
+-- NOTA POINT-FREE: acá antes era "obstaculos metros tramoInterno auto = (empeorarRuedas metros . tramoInterno) auto"
 
-empeorarRuedas :: Number -> Auto -> Auto
+
+empeorarRuedas :: Float -> Auto -> Auto
 empeorarRuedas metros auto = auto {
     desgaste = (fst (desgaste auto), snd (desgaste auto) + (2 * metros))
 }
 
---5
+
+-- ====================================================================
+{- CONSIGNA:
+Realizar la función que haga pasarPorTramo/2...
+-}
+-- ====================================================================
+
 pasarPorTramo :: Tramo -> Auto -> Auto
 pasarPorTramo tramo auto 
  | noDaMas auto = auto
  | otherwise = tramo auto
 
 
---6
---a
+-- ====================================================================
+{- CONSIGNA:
+Crear la superPista con los tramos indicados.
+Hacer la función peganLaVuelta/2...
+-}
+-- ====================================================================
+
 superPista :: Pista
 superPista = [
     tramoRectoClassic, 
     curvaTranca, 
     mojado tramito, 
     tramito, 
-    obstaculos 2 (curva 80 400), -- Obstrucción de 2m
+    obstaculos 2 (curva 80 400),
     curva 115 650, 
     recto 970, 
     curvaPeligrosa, 
     ripio tramito, 
-    boxes (recto 800) -- Paréntesis necesarios
-]
+    boxes (recto 800)
+ ]
 
---b
 peganLaVuelta :: Pista -> [Auto] -> [Auto]
-peganLaVuelta pista autos = map (darVuelta pista) autos
+peganLaVuelta pista = map (darVuelta pista)
+-- NOTA POINT-FREE: acá antes era "peganLaVuelta pista autos = map (darVuelta pista) autos"
 
 darVuelta :: Pista -> Auto -> Auto
 darVuelta pista autoInicial = foldl (flip pasarPorTramo) autoInicial pista
 
 
---7
-data Carrera = Carrera{
+-- ====================================================================
+{- CONSIGNA:
+Modelar una carrera que está dada por una pista y un número de vueltas...
+-}
+-- ====================================================================
+
+data Carrera = Carrera {
     pista :: Pista,
-    vueltas :: Number
+    vueltas :: Int
 }
 
-tourBuenosAires = Carrera{
+tourBuenosAires :: Carrera
+tourBuenosAires = Carrera {
     pista = superPista,
     vueltas = 20
 }
 
-jugarCarrera :: Carrera -> [Auto] 
-jugarCarrera carrera autos = 
-    take (vueltas carrera +1) $ iterate (darVueltaYFiltrar (pista carrera)) autos
-
+jugarCarrera :: Carrera -> [Auto] -> [[Auto]]
+jugarCarrera carrera = take (vueltas carrera + 1) . iterate (darVueltaYFiltrar (pista carrera))
+-- NOTA POINT-FREE: acá antes era "jugarCarrera carrera autos = take (vueltas carrera + 1) (iterate (darVueltaYFiltrar (pista carrera)) autos)"
 
 darVueltaYFiltrar :: Pista -> [Auto] -> [Auto]
-darVueltaYFiltrar pistaCarrera autos = filter (not . noDaMas) . peganLaVuelta pistaCarrera autos
+darVueltaYFiltrar pistaCarrera = filter (not . noDaMas) . peganLaVuelta pistaCarrera
+-- NOTA POINT-FREE: acá antes era "darVueltaYFiltrar pistaCarrera autos = (filter (not . noDaMas) . peganLaVuelta pistaCarrera) autos"
 
---8
-myPrecious :: [([a], c -> Number)] -> (b, c) -> Number
-myPrecious ts x = sum . map ( (($ snd x). snd ) . filter ((>5) . length . fst x)) $ ts
+
+-- ====================================================================
+{- CONSIGNA:
+Dada la siguiente función... Explicar el tipo.
+-}
+-- ====================================================================
+
+myPrecious :: [([a], c -> Float)] -> (b, c) -> Float
+myPrecious ts x = sum . map ( (($ snd x). snd ) . filter ((>5) . length . fst)) $ ts
+
+{- EXPLICACIÓN A AGREGAR EN EL PARCIAL:
+1. 'x' se le aplica 'snd' en ($ snd x), por lo que 'x' tiene que ser una tupla: (b, c).
+2. 'ts' es una lista que pasa por un 'filter', y la condición aplica 'length . fst' 
+   a cada elemento. Esto indica que cada elemento de 'ts' es una tupla, y su primer 
+   elemento es una lista (para poder usar length). 
+   Por ende, 'ts' tiene la forma: [([a], _)].
+3. El 'map' aplica la función (($ snd x) . snd) a los elementos filtrados de 'ts'.
+   Como extraemos el 'snd' de los elementos de 'ts' y luego le aplicamos con '$' 
+   el valor (snd x) -que es de tipo 'c'-, el segundo elemento de la tupla de 'ts' 
+   DEBE ser una función que reciba algo de tipo 'c'. 
+   Por ende, 'ts' tiene la forma: [([a], c -> resultado)].
+4. Finalmente, se hace un 'sum' de la lista resultante del map. Esto fuerza a que el 
+   'resultado' de esa función sea un número (en nuestro caso, Float/Number).
+Conclusión: myPrecious :: [([a], c -> Float)] -> (b, c) -> Float
+-}
